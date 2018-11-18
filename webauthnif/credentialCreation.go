@@ -139,6 +139,7 @@ type AuthenticatorSelectionCriteria struct {
 type AttestationConveyancePreference string
 
 const (
+	AttestationConveyancePreferenceEmpty AttestationConveyancePreference = ""
 	// AttestationConveyancePreferenceNone indicates that the Relying Party is not interested in authenticator
 	// attestation. For example, in order to potentially avoid having to obtain user consent to relay identifying
 	// information to the Relying Party, or to save a roundtrip to an Attestation CA.
@@ -195,6 +196,7 @@ const (
 type AuthenticatorTransport string
 
 const (
+	AuthenticatorTransportEmpty AuthenticatorTransport = ""
 	// AuthenticatorTransportUSB indicates the respective authenticator can be contacted over removable USB.
 	AuthenticatorTransportUSB AuthenticatorTransport = "usb"
 	// AuthenticatorTransportNFC indicates the respective authenticator can be contacted over Near Field Communication
@@ -221,6 +223,7 @@ type AuthenticatorTransports []AuthenticatorTransport
 type AuthenticatorAttachment string
 
 const (
+	AuthenticatorAttachmentEmpty AuthenticatorAttachment = ""
 	// AuthenticatorAttachmentPlatform indicates platform attachment.
 	// A platform authenticator is attached using a client device-specific transport, called platform attachment, and is
 	// usually not removable from the client device. A public key credential bound to a platform authenticator is called
@@ -242,6 +245,7 @@ const (
 type UserVerificationRequirement string
 
 const (
+	UserVerificationRequirementEmpty UserVerificationRequirement = ""
 	// UserVerificationRequirementRequired indicates that the Relying Party requires user verification for the operation
 	// and will fail the operation if the response does not have the UV flag set.
 	UserVerificationRequirementRequired UserVerificationRequirement = "required"
