@@ -6,6 +6,7 @@ import (
 	"github.com/miliya612/webauthn-demo/domain/service"
 	"github.com/miliya612/webauthn-demo/infra/persistance/datastore"
 	"github.com/miliya612/webauthn-demo/presentation/handler"
+	"github.com/miliya612/webauthn-demo/presentation/usecase"
 )
 
 type Registration struct {}
@@ -14,7 +15,7 @@ type Registerer interface {
 	InjectDB() *sql.DB
 	InjectTodoRepo() repo.TodoRepo
 	InjectTodoService() service.TodoService
-	InjectTodoHandler() handler.TodoHandler
+	InjectTodoHandler() handler.CredentialHandler
 }
 
 func (r *Registration) RegisterDB() *sql.DB {
@@ -25,14 +26,18 @@ func (r *Registration) RegisterDB() *sql.DB {
 	return db
 }
 
-func (r *Registration) RegisterTodoRepo() repo.TodoRepo {
+func (r *Registration) RegisterCredentialRepo() repo.CredentialRepo {
 	return datastore.NewTodoRepo(r.RegisterDB())
 }
 
-func (r *Registration) RegisterTodoService() service.TodoService {
-	return service.NewTodoService(r.RegisterTodoRepo())
+func (r *Registration) RegisterCredentialService() service.RegistrationService {
+	return service.NewRegistrationService(r.RegisterCredentialRepo())
 }
 
-func (r *Registration) RegisterTodoHandler() handler.AppHandler {
-	return handler.NewTodoHandler(r.RegisterTodoService())
+func (r *Registration) RegisterCredentialInitUsecase() usecase.RegistrationInitUseCase {
+	return usecase.NewRegistrationInitUseCase(r.RegisterCredentialService())
+}
+
+func (r *Registration) RegisterCredentialHandler() handler.AppHandler {
+	return handler.NewCredentialHandler(r.RegisterCredentialInitUsecase())
 }

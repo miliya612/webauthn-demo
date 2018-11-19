@@ -6,7 +6,7 @@ import (
 )
 
 type AppHandler interface {
-	TodoHandler
+	CredentialHandler
 }
 
 type APIHandleFunc func(*http.Request) httputil.Responder

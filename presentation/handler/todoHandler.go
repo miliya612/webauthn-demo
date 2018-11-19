@@ -15,7 +15,7 @@ import (
 	"strconv"
 )
 
-var KB int64 = 1024
+//var KB int64 = 1024
 
 type TodoHandler interface {
 	TodoIndex(r *http.Request) httputil.Responder
