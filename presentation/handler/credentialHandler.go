@@ -21,10 +21,17 @@ type CredentialHandler interface {
 
 type credentialHandler struct {
 	registrationInit usecase.RegistrationInitUseCase
+	registration usecase.RegistrationUseCase
 }
 
-func NewCredentialHandler(registrationInit usecase.RegistrationInitUseCase) CredentialHandler {
-	return &credentialHandler{registrationInit: registrationInit}
+func NewCredentialHandler(
+		registrationInit usecase.RegistrationInitUseCase,
+		registration usecase.RegistrationUseCase,
+	) CredentialHandler {
+	return &credentialHandler{
+		registrationInit: registrationInit,
+		registration: registration,
+	}
 }
 
 func (h *credentialHandler) RegistrationInit(r *http.Request) httputil.Responder {
@@ -40,6 +47,26 @@ func (h *credentialHandler) RegistrationInit(r *http.Request) httputil.Responder
 	}
 
 	resp, err := h.registrationInit.RegistrationInit(in)
+	if err != nil {
+		return httputil.Error(http.StatusInternalServerError, "something went wrong", err)
+	}
+	return httputil.Ok(resp)
+}
+
+
+func (h *credentialHandler) Registration(r *http.Request) httputil.Responder {
+	var in input.Registration
+	body, err := ioutil.ReadAll(io.LimitReader(r.Body, 1024*KB)) // 1MB
+	if err != nil {
+		return httputil.Error(http.StatusInternalServerError, "request body is too large", err)
+	}
+	defer r.Body.Close()
+
+	if err = json.Unmarshal(body, &in); err != nil {
+		return httputil.Error(http.StatusInternalServerError, "failed marshalling json", err)
+	}
+
+	resp, err := h.registration.Registration(in)
 	if err != nil {
 		return httputil.Error(http.StatusInternalServerError, "something went wrong", err)
 	}
