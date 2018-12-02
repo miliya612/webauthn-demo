@@ -1,6 +1,6 @@
 package webauthnif
 
-// Challenge is used to represent byte array which replaces BufferSource.
+// BufferSource is used to represent byte array which replaces BufferSource.
 // https://heycam.github.io/webidl/#BufferSource
 // As a cryptographic protocol, Web Authentication is dependent upon randomized challenges to avoid replay attacks.
 // Therefore, the values of both PublicKeyCredentialCreationOptions.challenge and

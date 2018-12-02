@@ -19,7 +19,7 @@ func NewRegistrationUseCase(service service.RegistrationService) (RegistrationUs
 }
 
 
-func (uc registrationInitUseCase)Registration(input input.Registration) (*output.Registration, error){
+func (uc registrationUseCase)Registration(input input.Registration) (*output.Registration, error){
 	//options, err := uc.service.Register()
 	//if err != nil {
 	//	return nil, err

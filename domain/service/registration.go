@@ -1,7 +1,6 @@
 package service
 
 import (
-	"errors"
 	"github.com/miliya612/webauthn-demo/domain/repo"
 	"github.com/miliya612/webauthn-demo/webauthnif"
 )
@@ -30,10 +29,6 @@ const (
 //   - id:          REQUIRED. This param identifies user who will register a credential to RP.
 //   - displayName: OPTIONAL. This params is intended to be shown to users.
 func (s registrationService) GetOptions(id, displayName string) (*webauthnif.CredentialCreationOptions, error) {
-
-	if len(id) == 0 {
-		return nil, errors.New("user指定されてないよerror")
-	}
 
 	rp := &webauthnif.PublicKeyCredentialRpEntity{
 		// rpidのscopeを指定した場合はここで指定

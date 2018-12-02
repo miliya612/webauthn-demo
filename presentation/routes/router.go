@@ -14,7 +14,7 @@ func NewRouter(app handler.AppHandler) *mux.Router {
 			Methods(route.Method).
 			Path(route.Path).
 			Name(route.Name).
-			HandlerFunc(mw.AccessControl(mw.Logging(route.HandlerFunc, route.Name)))
+			HandlerFunc(mw.AccessControl(mw.Logging(route.HandlerFunc)))
 	}
 	return router
 }

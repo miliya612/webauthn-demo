@@ -13,63 +13,83 @@ type Responder interface {
 	Body() []byte
 }
 
-type Response struct {
+type response struct {
 	status int
 	header http.Header
 	body   []byte
 }
 
-func (r *Response) Write(w http.ResponseWriter) {
+func (r *response) Write(w http.ResponseWriter) {
 	header := w.Header()
 	for k, v := range r.header {
 		header[k] = v
 	}
 	w.WriteHeader(r.status)
-	w.Write(r.body)
+	if _, err := w.Write(r.body); err != nil {
+		panic(err)
+	}
 }
 
-func (r Response) Status() int {
+func (r response) Status() int {
 	return r.status
 }
 
-func (r Response) Body() []byte {
+func (r response) Body() []byte {
 	return r.body
 }
 
-func (r Response) Header(k, v string) *Response {
+func (r *response) Header(k, v string) *response {
 	r.header.Set(k, v)
-	return &r
+	return r
 }
 
-func Empty(status int) *Response {
+func Empty(w http.ResponseWriter, status int) {
 	if isStatusCodeErrors(status) {
 		panic("status code is not 4xx or 5xx: Error() should be used for returning error response")
 	}
-	return respond(status, nil)
+	res := &response{
+		status: status,
+		header: make(http.Header),
+	}
+	res.respond(w, nil)
 }
 
-func jsonBody(status int, body interface{}) *Response {
-	return respond(status, body).Header("Content-Type", "application/json; charset=UTF-8")
+func Ok(w http.ResponseWriter, body interface{}) {
+	res := &response{
+		status: http.StatusOK,
+		header: make(http.Header),
+	}
+	res.jsonBody(w, body)
 }
 
-func Ok(body interface{}) *Response {
-	return jsonBody(http.StatusOK, body)
+func Created(w http.ResponseWriter, body interface{}, location string) {
+	r := response{
+		status: http.StatusCreated,
+		header: make(http.Header),
+	}
+	r.Header("Location", location)
+	r.jsonBody(w, body)
 }
 
-func Created(body interface{}, location string) *Response {
-	return jsonBody(http.StatusCreated, body).Header("Location", location)
-}
-
-func Error(status int, message string, err error) *Response {
+func Error(w http.ResponseWriter, status int, message string, err error) {
 	log.Printf("[ERROR]\t%s, %s", message, err)
 	msg := createErrMsg(status, fmt.Sprintf("%s: %s", message, err))
 	if !isStatusCodeErrors(status) {
 		panic("status code is not 4xx or 5xx")
 	}
-	return jsonBody(status, msg)
+	res := &response{
+		status: status,
+		header: make(http.Header),
+	}
+	res.jsonBody(w, msg)
 }
 
-func respond(status int, body interface{}) *Response {
+func (r *response) jsonBody(w http.ResponseWriter, body interface{}) {
+	r.Header("Content-Type", "application/json; charset=UTF-8")
+	r.respond(w, body)
+}
+
+func (r *response) respond(w http.ResponseWriter, body interface{}) {
 	var b []byte
 	var err error
 	switch t := body.(type) {
@@ -77,15 +97,12 @@ func respond(status int, body interface{}) *Response {
 		b = []byte(t)
 	default:
 		if b, err = json.Marshal(body); err != nil {
-			return Error(http.StatusInternalServerError, "failed marshalling json", err)
+			Error(w, http.StatusInternalServerError, "failed marshalling json", err)
 		}
 	}
 
-	return &Response{
-		status: status,
-		body:   b,
-		header: make(http.Header),
-	}
+	r.body = b
+	r.Write(w)
 }
 
 type errResp struct {

@@ -18,79 +18,79 @@ import (
 //var KB int64 = 1024
 
 type TodoHandler interface {
-	TodoIndex(r *http.Request) httputil.Responder
-	TodoShow(r *http.Request) httputil.Responder
-	TodoCreate(r *http.Request) httputil.Responder
-	TodoDelete(r *http.Request) httputil.Responder
+	TodoIndex(r *http.Request)
+	TodoShow(r *http.Request)
+	TodoCreate(r *http.Request)
+	TodoDelete(r *http.Request)
 }
 
 type todoHandler struct {
 	service service.TodoService
 }
 
-func NewTodoHandler(s service.TodoService) TodoHandler {
-	return &todoHandler{service: s}
-}
+//func NewTodoHandler(s service.TodoService) TodoHandler {
+//	return &todoHandler{service: s}
+//}
 
-func (h *todoHandler) TodoIndex(_ *http.Request) httputil.Responder {
+func (h *todoHandler) TodoIndex(w http.ResponseWriter, _ *http.Request) {
 	todos, err := h.service.All()
 	if err != nil {
-		return httputil.Error(http.StatusInternalServerError, "something went wrong", err)
+		httputil.Error(w, http.StatusInternalServerError, "something went wrong", err)
 	}
-	return httputil.Ok(todos)
+	httputil.Ok(w, todos)
 }
 
-func (h *todoHandler) TodoShow(r *http.Request) httputil.Responder {
+func (h *todoHandler) TodoShow(w http.ResponseWriter, r *http.Request) {
 	id, err := parseTodoId(r)
 	if err != nil {
-		return httputil.Error(http.StatusUnprocessableEntity, "invalid parameter", err)
+		httputil.Error(w, http.StatusUnprocessableEntity, "invalid parameter", err)
 	}
 
 	t, err := h.service.Find(id)
 	if err != nil {
 		switch err.(type) {
 		case errUtil.ErrTodoNotFound:
-			return httputil.Error(http.StatusNotFound, fmt.Sprintf("failed to search todo with id: %d", id), err)
+			httputil.Error(w, http.StatusNotFound, fmt.Sprintf("failed to search todo with id: %d", id), err)
 		default:
-			return httputil.Error(http.StatusInternalServerError, "something went wrong", err)
+			httputil.Error(w, http.StatusInternalServerError, "something went wrong", err)
 		}
 	}
 
-	return httputil.Ok(t)
+	httputil.Ok(w, t)
 }
 
-func (h *todoHandler) TodoCreate(r *http.Request) httputil.Responder {
+func (h *todoHandler) TodoCreate(w http.ResponseWriter, r *http.Request) {
 	var todo model.Todo
 	body, err := ioutil.ReadAll(io.LimitReader(r.Body, 1024*KB)) // 1MB
 	if err != nil {
-		return httputil.Error(http.StatusInternalServerError, "request body is too large", err)
+		httputil.Error(w, http.StatusInternalServerError, "request body is too large", err)
 	}
 	defer r.Body.Close()
 
 	if err = json.Unmarshal(body, &todo); err != nil {
-		return httputil.Error(http.StatusInternalServerError, "failed marshalling json", err)
+		httputil.Error(w, http.StatusInternalServerError, "failed marshalling json", err)
 	}
 
 	id, err := h.service.Create(todo)
 	if err != nil {
-		return httputil.Error(http.StatusInternalServerError, "something went wrong", err)
+		httputil.Error(w, http.StatusInternalServerError, "something went wrong", err)
 	}
 	todo.ID = id
 	location := fmt.Sprintf("http://%s/%d", r.Host, id)
-	return httputil.Created(todo, location)
+	httputil.Created(w, todo, location)
 }
 
-func (h *todoHandler) TodoDelete(r *http.Request) httputil.Responder {
+func (h *todoHandler) TodoDelete(w http.ResponseWriter, r *http.Request){
 	id, err := parseTodoId(r)
 	if err != nil {
-		return httputil.Error(http.StatusUnprocessableEntity, "invalid parameter", err)
+		httputil.Error(w, http.StatusUnprocessableEntity, "invalid parameter", err)
 	}
 
 	if err = h.service.Remove(id); err != nil {
-		return httputil.Error(http.StatusNotFound, fmt.Sprintf("failed to delete todo for id: %d", id), err)
+		httputil.Error(w, http.StatusNotFound, fmt.Sprintf("failed to delete todo for id: %d", id), err)
 	}
 
-	return httputil.Empty(http.StatusNoContent)
+	httputil.Empty(w, http.StatusNoContent)
 }
 
 func parseTodoId(r *http.Request) (int, error) {
