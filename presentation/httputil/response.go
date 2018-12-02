@@ -62,12 +62,19 @@ func Ok(w http.ResponseWriter, body interface{}) {
 	res.jsonBody(w, body)
 }
 
-func Created(w http.ResponseWriter, body interface{}, location string) {
+func Created(w http.ResponseWriter, body interface{}) {
 	r := response{
 		status: http.StatusCreated,
 		header: make(http.Header),
 	}
-	r.Header("Location", location)
+	r.jsonBody(w, body)
+}
+
+func Accepted(w http.ResponseWriter, body interface{}) {
+	r := response{
+		status: http.StatusAccepted,
+		header: make(http.Header),
+	}
 	r.jsonBody(w, body)
 }
 

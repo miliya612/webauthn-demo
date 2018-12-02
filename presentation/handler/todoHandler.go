@@ -76,8 +76,8 @@ func (h *todoHandler) TodoCreate(w http.ResponseWriter, r *http.Request) {
 		httputil.Error(w, http.StatusInternalServerError, "something went wrong", err)
 	}
 	todo.ID = id
-	location := fmt.Sprintf("http://%s/%d", r.Host, id)
-	httputil.Created(w, todo, location)
+	_ = fmt.Sprintf("http://%s/%d", r.Host, id)
+	httputil.Created(w, todo)
 }
 
 func (h *todoHandler) TodoDelete(w http.ResponseWriter, r *http.Request){

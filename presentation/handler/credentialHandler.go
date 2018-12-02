@@ -7,16 +7,14 @@ import (
 	"github.com/miliya612/webauthn-demo/presentation/httputil"
 	"github.com/miliya612/webauthn-demo/presentation/usecase"
 	"github.com/miliya612/webauthn-demo/presentation/usecase/input"
-	"io"
-	"io/ioutil"
 	"net/http"
 )
 
-var KB int64 = 1024
+
 
 type CredentialHandler interface {
 	RegistrationInit(w http.ResponseWriter, r *http.Request)
-	//Registration(w http.ResponseWriter, r *http.Request)
+	Registration(w http.ResponseWriter, r *http.Request)
 	//AuthenticationInit(w http.ResponseWriter, r *http.Request)
 	//Authentication(w http.ResponseWriter, r *http.Request)
 }
@@ -28,11 +26,11 @@ type credentialHandler struct {
 
 func NewCredentialHandler(
 		registrationInit usecase.RegistrationInitUseCase,
-		//registration usecase.RegistrationUseCase,
+		registration usecase.RegistrationUseCase,
 	) CredentialHandler {
 	return &credentialHandler{
 		registrationInit: registrationInit,
-		//registration: registration,
+		registration: registration,
 	}
 }
 
@@ -53,45 +51,40 @@ func (h *credentialHandler) RegistrationInit(w http.ResponseWriter, r *http.Requ
 		httputil.Error(w, http.StatusInternalServerError, "something went wrong", err)
 		return
 	}
-	httputil.Ok(w, resp)
+	httputil.Accepted(w, resp)
 }
 
 
 func (h *credentialHandler) Registration(w http.ResponseWriter, r *http.Request) {
-	var in input.Registration
-	body, err := ioutil.ReadAll(io.LimitReader(r.Body, 1024*KB)) // 1MB
+	in, err := parseRegistrationRequest(r)
 	if err != nil {
-		httputil.Error(w, http.StatusInternalServerError, "request body is too large", err)
-	}
-	defer r.Body.Close()
-
-	if err = json.Unmarshal(body, &in); err != nil {
-		httputil.Error(w, http.StatusInternalServerError, "failed marshalling json", err)
+		httputil.Error(w, http.StatusBadRequest, "failed to parse request", err)
+		return
 	}
 
-	resp, err := h.registration.Registration(in)
+	if err = validateRegistrationRequest(in); err != nil {
+		httputil.Error(w, http.StatusBadRequest, "invalid request", err)
+		return
+	}
+
+	resp, err := h.registration.Registration(*in)
 	if err != nil {
 		httputil.Error(w, http.StatusInternalServerError, "something went wrong", err)
+		return
 	}
-	httputil.Ok(w, resp)
+	httputil.Created(w, resp)
 }
 
 func parseRegistrationInitRequest(r *http.Request) (*input.RegistrationInit, error) {
 	var in input.RegistrationInit
-	body, err := ioutil.ReadAll(io.LimitReader(r.Body, 1024*KB)) // 1MB
+	body, err := httputil.ParseBody(r)
 	if err != nil {
-		return nil, errors.New("request body is too large")
-	}
-	defer r.Body.Close()
-
-	if len(body) == 0 {
-		return nil, errors.New("empty body is not acceptable")
+		return nil, err
 	}
 
-	if err = json.Unmarshal(body, &in); err != nil {
+	if err := json.Unmarshal(body, &in); err != nil {
 		return nil, errors.New(fmt.Sprint("failed marshalling json", err))
 	}
-
 
 	return &in, nil
 }
@@ -104,6 +97,35 @@ func validateRegistrationInitRequest(in *input.RegistrationInit) error {
 	if in.DisplayName == "" {
 		invalidParams = append(invalidParams, "displayName")
 	}
+	if len(invalidParams) != 0 {
+		return errors.New(fmt.Sprint("required parameters are missing: ", invalidParams))
+	}
+	return nil
+}
+
+func parseRegistrationRequest(r *http.Request) (*input.Registration, error) {
+	var in input.Registration
+
+	body, err := httputil.ParseBody(r)
+	if err != nil {
+		return nil, err
+	}
+
+	if err = json.Unmarshal(body, &in); err != nil {
+		return nil, errors.New(fmt.Sprint("failed marshalling json", err))
+	}
+
+	return &in, nil
+}
+
+func validateRegistrationRequest(in *input.Registration) error {
+	var invalidParams []string
+	//if in.ID == "" {
+	//	invalidParams = append(invalidParams, "id")
+	//}
+	//if in.DisplayName == "" {
+	//	invalidParams = append(invalidParams, "displayName")
+	//}
 	if len(invalidParams) != 0 {
 		return errors.New(fmt.Sprint("required parameters are missing: ", invalidParams))
 	}
