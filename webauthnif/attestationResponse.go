@@ -10,6 +10,8 @@ type AuthenticatorAttestationResponse struct {
 	// AuthenticatorResponse contains the JSON-serialized client data (see §6.4 Attestation) passed to the authenticator
 	// by the client in order to generate this credential. The exact JSON serialization MUST be preserved, as the hash
 	// of the serialized client data has been computed over it.
+	// the hash of the serialized client data is the hash (computed using SHA-256) of the JSON-serialized client data,
+	// as constructed by the client.
 	AuthenticatorResponse
 	// AttestationObject contains an attestation object, which is opaque to, and cryptographically protected against tampering by, the
 	// client. The attestation object contains both authenticator data and an attestation statement. The former contains
@@ -28,4 +30,22 @@ type AuthenticatorResponse struct {
 	// ClientDataJSON contains a JSON serialization of the client data passed to the authenticator by the client in its
 	// call to either create() or get().
 	ClientDataJSON []byte `json:"clientDataJson"`
+}
+
+// DecodedAuthenticatorAttestationResponse represents the result of parsing the AuthenticatorAttestationResponse
+type DecodedAuthenticatorAttestationResponse struct {
+
+}
+
+// DecodedAuthenticatorResponse represents the result of running UTF-8 decode on the value of
+// AuthenticatorResponse.clientDataJSON
+type DecodedAuthenticatorResponse struct {
+	ClientData ClientData `json:"clientData"`
+}
+
+// ClientData represents
+type ClientData struct {
+	Type string `json:"type"`
+	Challenge BufferSource `json:"challenge"`
+	Origin string `json:"origin"`
 }

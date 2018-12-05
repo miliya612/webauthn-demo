@@ -18,7 +18,6 @@ func NewRegistrationInitUseCase(service service.RegistrationService) (Registrati
 	return &registrationInitUseCase{service: service}
 }
 
-
 func (uc registrationInitUseCase)RegistrationInit(input input.RegistrationInit) (*output.RegistrationInit, error){
 	options, err := uc.service.GetOptions(input.ID, input.DisplayName)
 	if err != nil {

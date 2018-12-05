@@ -1,6 +1,7 @@
 package webauthnif
 
 import (
+	"bytes"
 	"math/rand"
 	"time"
 )
@@ -19,4 +20,8 @@ func GenChallenge() (challenge BufferSource, err error) {
 	rand.Seed(time.Now().UnixNano())
 	_, err = rand.Read(challenge)
 	return
+}
+
+func (bf BufferSource) Equals(abf BufferSource) bool {
+	return bytes.Equal(([]byte)(bf), ([]byte)(abf))
 }
