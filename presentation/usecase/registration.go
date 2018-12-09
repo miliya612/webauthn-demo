@@ -19,6 +19,11 @@ func NewRegistrationUseCase(service service.RegistrationService) (RegistrationUs
 	return &registrationUseCase{service: service}
 }
 
+// 7.1.
+// Registering a new credential
+// When registering a new credential, represented by an AuthenticatorAttestationResponse structure response and an
+// AuthenticationExtensionsClientOutputs structure clientExtensionResults, as part of a registration ceremony, a Relying
+// Party MUST proceed as follows:
 func (uc registrationUseCase)Registration(input input.Registration) (*output.Registration, error) {
 	d, err := uc.service.ParseClientData(input.Body.Response)
 	if err != nil {

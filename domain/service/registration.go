@@ -143,56 +143,6 @@ func (s registrationService) ReserveClientInfo(userId, chal []byte, name, displa
 	return err
 }
 
-// 7.1.
-// Registering a new credential
-// When registering a new credential, represented by an AuthenticatorAttestationResponse structure response and an
-// AuthenticationExtensionsClientOutputs structure clientExtensionResults, as part of a registration ceremony, a Relying
-// Party MUST proceed as follows:
-func (s registrationService) Register(userId []byte, data webauthnif.AttestedCredentialData) error {
-
-
-	// 15. If validation is successful, obtain a list of acceptable trust anchors (attestation root certificates or
-	// ECDAA-Issuer public keys) for that attestation type and attestation statement format fmt, from a trusted source
-	// or from policy. For example, the FIDO Metadata Service  [FIDOMetadataService] provides one way to obtain such
-	// information, using the aaguid in the attestedCredentialData in authData.
-
-	// 16. Assess the attestation trustworthiness using the outputs of the verification procedure in step 14, as follows:
-	//     - If self attestation was used, check if self attestation is acceptable under Relying Party policy.
-	//     - If ECDAA was used, verify that the identifier of the ECDAA-Issuer public key used is included in the set of
-	//     acceptable trust anchors obtained in step 15.
-	//     - Otherwise, use the X.509 certificates returned by the verification procedure to verify that the attestation
-	//     public key correctly chains up to an acceptable root certificate.
-
-	// 17. Check that the credentialId is not yet registered to any other user. If registration is requested for a
-	// credential that is already registered to a different user, the Relying Party SHOULD fail this registration
-	// ceremony, or it MAY decide to accept the registration, e.g. while deleting the older registration.
-	cred, err := s.credentialRepo.GetByCredentialID(data.CredentialID)
-	if err != nil {
-		return errors.New(fmt.Sprintf("invalidRegistrationRequest: %v", err))
-	}
-	if cred != nil {
-		errMsg := "credentialId has already been registered"
-		return errors.New(fmt.Sprintf("invalidRegistrationRequest: %v", errMsg))
-	}
-
-	// 18. If the attestation statement attStmt verified successfully and is found to be trustworthy, then register the
-	// new credential with the account that was denoted in the options.user passed to create(), by associating it with
-	// the credentialId and credentialPublicKey in the attestedCredentialData in authData, as appropriate for the
-	// Relying Party's system.
-	newCred := model.Credential{
-		CredentialID: data.CredentialID,
-		UserID:       userId,
-		PublicKey:    data.CredentialPublicKey,
-		SignCount:    0,
-	}
-	_, err = s.credentialRepo.Create(newCred)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func (s registrationService) ParseClientData(req webauthnif.AuthenticatorAttestationResponse) (
 	*webauthnif.DecodedAuthenticatorAttestationResponse, error) {
 
@@ -317,6 +267,49 @@ func (s registrationService) ValidateAttestationResponse(
 	if err != nil {
 		errMsg := fmt.Sprintf("attestation statement is not matched with its format: %v", attObj.Fmt)
 		return errors.New(fmt.Sprintf("invalidRegistrationRequest: %v", errMsg))
+	}
+
+	// 15. If validation is successful, obtain a list of acceptable trust anchors (attestation root certificates or
+	// ECDAA-Issuer public keys) for that attestation type and attestation statement format fmt, from a trusted source
+	// or from policy. For example, the FIDO Metadata Service  [FIDOMetadataService] provides one way to obtain such
+	// information, using the aaguid in the attestedCredentialData in authData.
+
+	// 16. Assess the attestation trustworthiness using the outputs of the verification procedure in step 14, as follows:
+	//     - If self attestation was used, check if self attestation is acceptable under Relying Party policy.
+	//     - If ECDAA was used, verify that the identifier of the ECDAA-Issuer public key used is included in the set of
+	//     acceptable trust anchors obtained in step 15.
+	//     - Otherwise, use the X.509 certificates returned by the verification procedure to verify that the attestation
+	//     public key correctly chains up to an acceptable root certificate.
+
+	return nil
+}
+
+func (s registrationService) Register(userId []byte, data webauthnif.AttestedCredentialData) error {
+	// 17. Check that the credentialId is not yet registered to any other user. If registration is requested for a
+	// credential that is already registered to a different user, the Relying Party SHOULD fail this registration
+	// ceremony, or it MAY decide to accept the registration, e.g. while deleting the older registration.
+	cred, err := s.credentialRepo.GetByCredentialID(data.CredentialID)
+	if err != nil {
+		return errors.New(fmt.Sprintf("invalidRegistrationRequest: %v", err))
+	}
+	if cred != nil {
+		errMsg := "credentialId has already been registered"
+		return errors.New(fmt.Sprintf("invalidRegistrationRequest: %v", errMsg))
+	}
+
+	// 18. If the attestation statement attStmt verified successfully and is found to be trustworthy, then register the
+	// new credential with the account that was denoted in the options.user passed to create(), by associating it with
+	// the credentialId and credentialPublicKey in the attestedCredentialData in authData, as appropriate for the
+	// Relying Party's system.
+	newCred := model.Credential{
+		CredentialID: data.CredentialID,
+		UserID:       userId,
+		PublicKey:    data.CredentialPublicKey,
+		SignCount:    0,
+	}
+	_, err = s.credentialRepo.Create(newCred)
+	if err != nil {
+		return err
 	}
 
 	return nil
