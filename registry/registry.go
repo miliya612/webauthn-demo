@@ -46,12 +46,22 @@ func (r *Registration) RegisterCredentialService() service.RegistrationService {
 	)
 }
 
+func (r *Registration) RegisterSessionService() service.SessionService {
+	return service.NewSessionService(r.RegisterSessionRepo())
+}
+
 func (r *Registration) RegisterCredentialInitUsecase() usecase.RegistrationInitUseCase {
-	return usecase.NewRegistrationInitUseCase(r.RegisterCredentialService())
+	return usecase.NewRegistrationInitUseCase(
+		r.RegisterCredentialService(),
+		r.RegisterSessionService(),
+	)
 }
 
 func (r *Registration) RegisterCredentialRegisterUsecase() usecase.RegistrationUseCase {
-	return usecase.NewRegistrationUseCase(r.RegisterCredentialService())
+	return usecase.NewRegistrationUseCase(
+		r.RegisterCredentialService(),
+		r.RegisterSessionService(),
+	)
 }
 
 func (r *Registration) RegisterCredentialHandler() handler.AppHandler {

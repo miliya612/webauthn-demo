@@ -1,6 +1,7 @@
 package usecase
 
 import (
+	"context"
 	"github.com/miliya612/webauthn-demo/domain/service"
 	"github.com/miliya612/webauthn-demo/presentation/usecase/input"
 	"github.com/miliya612/webauthn-demo/presentation/usecase/output"
@@ -8,27 +9,41 @@ import (
 )
 
 type RegistrationInitUseCase interface {
-	RegistrationInit(input input.RegistrationInit) (*output.RegistrationInit, error)
+	RegistrationInit(ctx context.Context, input input.RegistrationInit) (*output.RegistrationInit, error)
 }
 
 type registrationInitUseCase struct {
-	service service.RegistrationService
+	registration service.RegistrationService
+	session      service.SessionService
 }
 
-func NewRegistrationInitUseCase(service service.RegistrationService) (RegistrationInitUseCase) {
-	return &registrationInitUseCase{service: service}
+func NewRegistrationInitUseCase(registration service.RegistrationService, session service.SessionService,
+) RegistrationInitUseCase {
+	return &registrationInitUseCase{
+		registration: registration,
+		session:      session,
+	}
 }
 
-func (uc registrationInitUseCase) RegistrationInit(input input.RegistrationInit) (*output.RegistrationInit, error) {
-	options, err := uc.service.GetOptions(input.ID, input.DisplayName)
+func (uc registrationInitUseCase) RegistrationInit(ctx context.Context, input input.RegistrationInit,
+) (*output.RegistrationInit, error) {
+	options, err := uc.registration.GetOptions(input.ID, input.DisplayName)
 	if err != nil {
 		return nil, err
 	}
 	u := options.PublicKey.User
-	err = uc.service.ReserveClientInfo(u.ID, u.Name, u.DisplayName, u.Icon)
+	err = uc.registration.ReserveClientInfo(u.ID, u.Name, u.DisplayName, u.Icon)
 	if err != nil {
 		return nil, err
 	}
+
+	rawSid := ctx.Value("sid")
+	sid := rawSid.(string)
+	err = uc.session.Store(sid, u.ID, options.PublicKey.Challenge)
+	if err != nil {
+		return nil, err
+	}
+
 	return &output.RegistrationInit{
 		CredentialCreationOptions: webauthnif.CredentialCreationOptions{
 			PublicKey: options.PublicKey,

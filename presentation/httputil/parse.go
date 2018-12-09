@@ -16,6 +16,8 @@ func ParseBody(r *http.Request) ([]byte, error) {
 	}
 	defer r.Body.Close()
 
+	//fmt.Println(r.GetBody())
+
 	if len(body) == 0 {
 		return nil, errors.New("empty body is not acceptable")
 	}

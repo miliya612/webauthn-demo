@@ -34,7 +34,6 @@ type RegistrationService interface {
 type registrationService struct {
 	credentialRepo repo.CredentialRepo
 	userRepo       repo.UserRepo
-	sessionRepo    repo.SessionRepo
 }
 
 func NewRegistrationService(
@@ -42,7 +41,6 @@ func NewRegistrationService(
 	return &registrationService{
 		credentialRepo: credential,
 		userRepo:       user,
-		sessionRepo:    session,
 	}
 }
 

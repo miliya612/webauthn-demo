@@ -2,10 +2,12 @@ package pg
 
 import (
 	"database/sql"
+	"fmt"
 	_ "github.com/lib/pq"
 	"github.com/miliya612/webauthn-demo/domain/model"
 	"github.com/miliya612/webauthn-demo/domain/repo"
 	"github.com/pkg/errors"
+	"time"
 )
 
 type sessionRepo struct {
@@ -21,6 +23,7 @@ func NewSessionRepo(db *sql.DB) repo.SessionRepo {
 func (repo sessionRepo) GetByID(id string) (*model.Session, error) {
 	for _, s := range sessions {
 		if id == s.ID {
+			s.LastAccessed = time.Now()
 			return s, nil
 		}
 	}
@@ -28,6 +31,7 @@ func (repo sessionRepo) GetByID(id string) (*model.Session, error) {
 }
 
 func (repo sessionRepo) Create(session model.Session) (*model.Session, error) {
+	fmt.Println("session: ", session)
 	sessions = append(sessions, &session)
 	return &session, nil
 }

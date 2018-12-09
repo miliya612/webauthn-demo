@@ -10,6 +10,5 @@ type RegistrationInit struct {
 }
 
 type Registration struct {
-	Body webauthnif.PublicKeyCredential
-	Challenge []byte
+	webauthnif.PublicKeyCredential
 }

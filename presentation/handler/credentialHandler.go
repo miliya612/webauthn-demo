@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"context"
+	"crypto/rand"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -44,7 +46,15 @@ func (h *credentialHandler) RegistrationInit(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	resp, err := h.registrationInit.RegistrationInit(*in)
+	ctx := r.Context()
+	uuid, err := createUUID()
+	if err != nil {
+		httputil.Error(w, http.StatusInternalServerError, "something went wrong", err)
+		return
+	}
+	ctx = context.WithValue(ctx, "sid", uuid)
+
+	resp, err := h.registrationInit.RegistrationInit(ctx, *in)
 	if err != nil {
 		httputil.Error(w, http.StatusInternalServerError, "something went wrong", err)
 		return
@@ -52,7 +62,7 @@ func (h *credentialHandler) RegistrationInit(w http.ResponseWriter, r *http.Requ
 
 	fmt.Println("chal: ", string(resp.PublicKey.Challenge))
 
-	http.SetCookie(w, &http.Cookie{Name: "Challenge", Value: string(resp.PublicKey.Challenge)})
+	http.SetCookie(w, &http.Cookie{Name: "sid", Value: uuid})
 
 	httputil.Created(w, resp)
 }
@@ -69,7 +79,7 @@ func (h *credentialHandler) Registration(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	resp, err := h.registration.Registration(*in)
+	resp, err := h.registration.Registration(r.Context(), *in)
 	if err != nil {
 		httputil.Error(w, http.StatusInternalServerError, "something went wrong", err)
 		return
@@ -113,18 +123,18 @@ func parseRegistrationRequest(r *http.Request) (*input.Registration, error) {
 		return nil, err
 	}
 
-	if err = json.Unmarshal(body, &in.Body); err != nil {
+	if err = json.Unmarshal(body, &in); err != nil {
 		return nil, errors.New(fmt.Sprint("failed marshalling json", err))
 	}
 
-	fmt.Println(in.Body)
-
-	c, err := r.Cookie("Challenge")
+	c, err := r.Cookie("sid")
 	if err != nil {
 		return nil, errors.New(fmt.Sprint("failed parsing cookie", err))
 	}
-	fmt.Println("chalCookie: ", c.Value)
-	in.Challenge = []byte(c.Value)
+
+	fmt.Println("sessionID: ", c.Value)
+	ctx := context.WithValue(r.Context(), "sid", c.Value)
+	r = r.WithContext(ctx)
 
 	return &in, nil
 }
@@ -141,4 +151,21 @@ func validateRegistrationRequest(in *input.Registration) error {
 		return errors.New(fmt.Sprint("required parameters are missing: ", invalidParams))
 	}
 	return nil
+}
+
+// create a random UUID with from RFC 4122
+// adapted from http://github.com/nu7hatch/gouuid
+func createUUID() (string, error){
+	u := new([16]byte)
+	_, err := rand.Read(u[:])
+	if err != nil {
+		return "", errors.New(fmt.Sprintf("Failed to generate UUID: %s", err))
+	}
+
+	// 0x40 is reserved variant from RFC 4122
+	u[8] = (u[8] | 0x40) & 0x7F
+	// Set the four most significant bits (bits 12 through 15) of the
+	// time_hi_and_version field to the 4-bit version number.
+	u[6] = (u[6] & 0xF) | (0x4 << 4)
+	return fmt.Sprintf("%x-%x-%x-%x-%x", u[0:4], u[4:6], u[6:8], u[8:10], u[10:]), nil
 }
