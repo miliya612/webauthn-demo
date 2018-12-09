@@ -4,12 +4,12 @@ import (
 	"database/sql"
 	"github.com/miliya612/webauthn-demo/domain/repo"
 	"github.com/miliya612/webauthn-demo/domain/service"
-	"github.com/miliya612/webauthn-demo/infra/persistance/datastore"
+	"github.com/miliya612/webauthn-demo/infra/persistance/pg"
 	"github.com/miliya612/webauthn-demo/presentation/handler"
 	"github.com/miliya612/webauthn-demo/presentation/usecase"
 )
 
-type Registration struct {}
+type Registration struct{}
 
 type Registerer interface {
 	InjectDB() *sql.DB
@@ -27,11 +27,23 @@ func (r *Registration) RegisterDB() *sql.DB {
 }
 
 func (r *Registration) RegisterCredentialRepo() repo.CredentialRepo {
-	return datastore.NewCredentialRepo(r.RegisterDB())
+	return pg.NewCredentialRepo(r.RegisterDB())
+}
+
+func (r *Registration) RegisterUserRepo() repo.UserRepo {
+	return pg.NewUserRepo(r.RegisterDB())
+}
+
+func (r *Registration) RegisterSessionRepo() repo.SessionRepo {
+	return pg.NewSessionRepo(r.RegisterDB())
 }
 
 func (r *Registration) RegisterCredentialService() service.RegistrationService {
-	return service.NewRegistrationService(r.RegisterCredentialRepo())
+	return service.NewRegistrationService(
+		r.RegisterCredentialRepo(),
+		r.RegisterUserRepo(),
+		r.RegisterSessionRepo(),
+	)
 }
 
 func (r *Registration) RegisterCredentialInitUsecase() usecase.RegistrationInitUseCase {
@@ -46,5 +58,5 @@ func (r *Registration) RegisterCredentialHandler() handler.AppHandler {
 	return handler.NewCredentialHandler(
 		r.RegisterCredentialInitUsecase(),
 		r.RegisterCredentialRegisterUsecase(),
-		)
+	)
 }
