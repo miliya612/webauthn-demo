@@ -23,6 +23,12 @@ func (uc registrationInitUseCase)RegistrationInit(input input.RegistrationInit) 
 	if err != nil {
 		return nil, err
 	}
+	u := options.PublicKey.User
+	chal := options.PublicKey.Challenge
+	err = uc.service.ReserveClientInfo(u.ID, chal, u.Name, u.DisplayName, u.Icon)
+	if err != nil {
+		return nil, err
+	}
 	return &output.RegistrationInit{
 		Options: *options,
 	}, nil
