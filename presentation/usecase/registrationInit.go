@@ -4,6 +4,7 @@ import (
 	"github.com/miliya612/webauthn-demo/domain/service"
 	"github.com/miliya612/webauthn-demo/presentation/usecase/input"
 	"github.com/miliya612/webauthn-demo/presentation/usecase/output"
+	"github.com/miliya612/webauthn-demo/webauthnif"
 )
 
 type RegistrationInitUseCase interface {
@@ -23,13 +24,15 @@ func (uc registrationInitUseCase)RegistrationInit(input input.RegistrationInit) 
 	if err != nil {
 		return nil, err
 	}
-	u := options.PublicKey.User
-	chal := options.PublicKey.Challenge
-	err = uc.service.ReserveClientInfo(u.ID, chal, u.Name, u.DisplayName, u.Icon)
+	//u := options.PublicKey.User
+	//chal := options.PublicKey.Challenge
+	//err = uc.service.ReserveClientInfo(u.ID, chal, u.Name, u.DisplayName, u.Icon)
 	if err != nil {
 		return nil, err
 	}
 	return &output.RegistrationInit{
-		Options: *options,
+		CredentialCreationOptions: webauthnif.CredentialCreationOptions{
+			PublicKey: options.PublicKey,
+		},
 	}, nil
 }

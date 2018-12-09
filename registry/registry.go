@@ -27,7 +27,7 @@ func (r *Registration) RegisterDB() *sql.DB {
 }
 
 func (r *Registration) RegisterCredentialRepo() repo.CredentialRepo {
-	return datastore.NewTodoRepo(r.RegisterDB())
+	return datastore.NewCredentialRepo(r.RegisterDB())
 }
 
 func (r *Registration) RegisterCredentialService() service.RegistrationService {
@@ -38,6 +38,13 @@ func (r *Registration) RegisterCredentialInitUsecase() usecase.RegistrationInitU
 	return usecase.NewRegistrationInitUseCase(r.RegisterCredentialService())
 }
 
+func (r *Registration) RegisterCredentialRegisterUsecase() usecase.RegistrationUseCase {
+	return usecase.NewRegistrationUseCase(r.RegisterCredentialService())
+}
+
 func (r *Registration) RegisterCredentialHandler() handler.AppHandler {
-	return handler.NewCredentialHandler(r.RegisterCredentialInitUsecase())
+	return handler.NewCredentialHandler(
+		r.RegisterCredentialInitUsecase(),
+		r.RegisterCredentialRegisterUsecase(),
+		)
 }

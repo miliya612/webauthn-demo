@@ -7,9 +7,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/miliya612/webauthn-demo/domain/model"
-	"github.com/miliya612/webauthn-demo/domain/service/attestation"
-
 	"github.com/miliya612/webauthn-demo/domain/repo"
+	"github.com/miliya612/webauthn-demo/domain/service/attestation"
 	"github.com/miliya612/webauthn-demo/webauthnif"
 	"github.com/pkg/errors"
 	"github.com/ugorji/go/codec"
@@ -18,7 +17,17 @@ import (
 type RegistrationService interface {
 	GetOptions(id, displayName string) (*webauthnif.CredentialCreationOptions, error)
 	ReserveClientInfo(userId, chal []byte, name, displayName, icon string) error
-	Register(userId []byte, req webauthnif.AuthenticatorAttestationResponse) error
+	Register(userId []byte, data webauthnif.AttestedCredentialData) error
+	ParseClientData(req webauthnif.AuthenticatorAttestationResponse) (
+	*webauthnif.DecodedAuthenticatorAttestationResponse, error)
+	ValidateClientData(c webauthnif.CollectedClientData) error
+	ParseAttestationObj(
+		req []byte,
+		d *webauthnif.DecodedAuthenticatorAttestationResponse,
+	) (*webauthnif.DecodedAuthenticatorAttestationResponse, error)
+	ValidateClientExtensionOutputs(outputs webauthnif.AuthenticationExtensionsClientOutputs) error
+	ValidateAttestationResponse(attObj webauthnif.DecodedAttestationObject, hashedClientData [32]byte) error
+	ValidateAuthenticatorData(data webauthnif.AuthenticatorData) error
 }
 
 type registrationService struct {
@@ -26,15 +35,14 @@ type registrationService struct {
 	userRepo       repo.UserRepo
 }
 
-func NewRegistrationService(credential repo.CredentialRepo, user repo.UserRepo) RegistrationService {
+func NewRegistrationService(credential repo.CredentialRepo) RegistrationService {
 	return &registrationService{
 		credentialRepo: credential,
-		userRepo:       user,
 	}
 }
 
 const (
-	RPID                       string = "miliya.tech"
+	RPID                       string = "localhost"
 	RPNAME                     string = "miliya612 - webauthn demo"
 	TIMEOUTMILLSEC             uint32 = 6000
 	CLIENTDATATYPE             string = "webauthn.create"
@@ -140,60 +148,7 @@ func (s registrationService) ReserveClientInfo(userId, chal []byte, name, displa
 // When registering a new credential, represented by an AuthenticatorAttestationResponse structure response and an
 // AuthenticationExtensionsClientOutputs structure clientExtensionResults, as part of a registration ceremony, a Relying
 // Party MUST proceed as follows:
-func (s registrationService) Register(userId []byte, req webauthnif.AuthenticatorAttestationResponse) error {
-	d, err := parseClientData(req)
-	if err != nil {
-		return err
-	}
-
-	c := d.ClientData
-
-	err = validateAttestationResponse(c)
-	if err != nil {
-		return err
-	}
-
-	// 7. Compute the hash of response.clientDataJSON using SHA-256.
-	hashedClientDataJSON := sha256.Sum256(req.ClientDataJSON)
-
-	d, err = parseAttestationObj(req.AttestationObject, d)
-	if err != nil {
-		return err
-	}
-
-	err = validateAuthenticatorData(d.DecodedAttestationObject.AuthData)
-	if err != nil {
-		return err
-	}
-
-	// 12. Verify that the values of the client extension outputs in clientExtensionResults and the authenticator
-	// extension outputs in the extensions in authData are as expected, considering the client extension input values
-	// that were given as the extensions option in the create() call. In particular, any extension identifier values in
-	// the clientExtensionResults and the extensions in authData MUST be also be present as extension identifier values
-	// in the extensions member of options, i.e., no extensions are present that were not requested. In the general
-	// case, the meaning of "are as expected" is specific to the Relying Party and which extensions are in use.
-
-	// 13. Determine the attestation statement format by performing a USASCII case-sensitive match on fmt against the
-	// set of supported WebAuthn Attestation Statement Format Identifier values. The up-to-date list of registered
-	// WebAuthn Attestation Statement Format Identifier values is maintained in the in the IANA registry of the same
-	// name.
-	att := d.DecodedAttestationObject
-
-	verifier, ok := attestation.AttVerifiers[att.Fmt]
-	if !ok {
-		errMsg := "Unsupported attestation statement format identifier"
-		return errors.New(fmt.Sprintf("invalidRegistrationRequest: %v", errMsg))
-	}
-
-	// 14. Verify that attStmt is a correct attestation statement, conveying a valid attestation signature, by using the
-	// attestation statement format fmt’s verification procedure given attStmt, authData and the hash of the serialized
-	// client data computed in step 7.
-	err = verifier(att, hashedClientDataJSON)
-	if err != nil {
-		errMsg := fmt.Sprintf("attestation statement is not matched with its format: %v", att.Fmt)
-		return errors.New(fmt.Sprintf("invalidRegistrationRequest: %v", errMsg))
-	}
-
+func (s registrationService) Register(userId []byte, data webauthnif.AttestedCredentialData) error {
 
 
 	// 15. If validation is successful, obtain a list of acceptable trust anchors (attestation root certificates or
@@ -211,7 +166,7 @@ func (s registrationService) Register(userId []byte, req webauthnif.Authenticato
 	// 17. Check that the credentialId is not yet registered to any other user. If registration is requested for a
 	// credential that is already registered to a different user, the Relying Party SHOULD fail this registration
 	// ceremony, or it MAY decide to accept the registration, e.g. while deleting the older registration.
-	cred, err := repo.CredentialRepo.GetByCredentialID(d.DecodedAttestationObject.AuthData.AttestedCredentialData.CredentialID)
+	cred, err := s.credentialRepo.GetByCredentialID(data.CredentialID)
 	if err != nil {
 		return errors.New(fmt.Sprintf("invalidRegistrationRequest: %v", err))
 	}
@@ -225,9 +180,9 @@ func (s registrationService) Register(userId []byte, req webauthnif.Authenticato
 	// the credentialId and credentialPublicKey in the attestedCredentialData in authData, as appropriate for the
 	// Relying Party's system.
 	newCred := model.Credential{
-		CredentialID: d.DecodedAttestationObject.AuthData.AttestedCredentialData.CredentialID,
+		CredentialID: data.CredentialID,
 		UserID:       userId,
-		PublicKey:    d.DecodedAttestationObject.AuthData.AttestedCredentialData.CredentialPublicKey,
+		PublicKey:    data.CredentialPublicKey,
 		SignCount:    0,
 	}
 	_, err = s.credentialRepo.Create(newCred)
@@ -238,7 +193,7 @@ func (s registrationService) Register(userId []byte, req webauthnif.Authenticato
 	return nil
 }
 
-func parseClientData(req webauthnif.AuthenticatorAttestationResponse) (
+func (s registrationService) ParseClientData(req webauthnif.AuthenticatorAttestationResponse) (
 	*webauthnif.DecodedAuthenticatorAttestationResponse, error) {
 
 	// 1. Let JSONtext be the result of running UTF-8 decode on the value of response.clientDataJSON.
@@ -253,7 +208,7 @@ func parseClientData(req webauthnif.AuthenticatorAttestationResponse) (
 	return &d, nil
 }
 
-func validateAttestationResponse(c webauthnif.CollectedClientData) error {
+func (s registrationService) ValidateClientData(c webauthnif.CollectedClientData) error {
 	// 3. Verify that the value of C.type is webauthn.create.
 	if c.Type != CLIENTDATATYPE {
 		errMsg := fmt.Sprintf("got %q, but %q is required", c.Type, CLIENTDATATYPE)
@@ -290,7 +245,7 @@ func validateAttestationResponse(c webauthnif.CollectedClientData) error {
 	return nil
 }
 
-func parseAttestationObj(
+func (s registrationService) ParseAttestationObj(
 	req []byte,
 	d *webauthnif.DecodedAuthenticatorAttestationResponse,
 ) (*webauthnif.DecodedAuthenticatorAttestationResponse, error) {
@@ -305,11 +260,11 @@ func parseAttestationObj(
 	return d, nil
 }
 
-func validateAuthenticatorData(data webauthnif.AuthenticatorData) error {
+func (s registrationService) ValidateAuthenticatorData(data webauthnif.AuthenticatorData) error {
 	// 9. Verify that the RP ID hash in authData is indeed the SHA-256 hash of the RP ID expected by the RP.
-	wantRpIdHash := sha256.Sum256([]byte(RPID))[:]
+	wantRpIdHash := sha256.Sum256([]byte(RPID))
 	gotRpIdHash := data.RpIdHash
-	if !bytes.Equal(wantRpIdHash, gotRpIdHash) {
+	if !bytes.Equal(wantRpIdHash[:], gotRpIdHash) {
 		errMsg := "invalid origin"
 		return errors.New(fmt.Sprintf("invalidRegistrationRequest: %v", errMsg))
 	}
@@ -328,5 +283,41 @@ func validateAuthenticatorData(data webauthnif.AuthenticatorData) error {
 			return errors.New(fmt.Sprintf("invalidRegistrationRequest: %v", errMsg))
 		}
 	}
+	return nil
+}
+
+func (s registrationService) ValidateClientExtensionOutputs(
+	outputs webauthnif.AuthenticationExtensionsClientOutputs) error {
+	// 12. Verify that the values of the client extension outputs in clientExtensionResults and the authenticator
+	// extension outputs in the extensions in authData are as expected, considering the client extension input values
+	// that were given as the extensions option in the create() call. In particular, any extension identifier values in
+	// the clientExtensionResults and the extensions in authData MUST be also be present as extension identifier values
+	// in the extensions member of options, i.e., no extensions are present that were not requested. In the general
+	// case, the meaning of "are as expected" is specific to the Relying Party and which extensions are in use.
+	return nil
+}
+
+func (s registrationService) ValidateAttestationResponse(
+	attObj webauthnif.DecodedAttestationObject, hashedClientData [32]byte) error {
+	// 13. Determine the attestation statement format by performing a USASCII case-sensitive match on fmt against the
+	// set of supported WebAuthn Attestation Statement Format Identifier values. The up-to-date list of registered
+	// WebAuthn Attestation Statement Format Identifier values is maintained in the in the IANA registry of the same
+	// name.
+
+	verifier, ok := attestation.AttVerifiers[attObj.Fmt]
+	if !ok {
+		errMsg := "Unsupported attestation statement format identifier"
+		return errors.New(fmt.Sprintf("invalidRegistrationRequest: %v", errMsg))
+	}
+
+	// 14. Verify that attStmt is a correct attestation statement, conveying a valid attestation signature, by using the
+	// attestation statement format fmt’s verification procedure given attStmt, authData and the hash of the serialized
+	// client data computed in step 7.
+	err := verifier(attObj, hashedClientData)
+	if err != nil {
+		errMsg := fmt.Sprintf("attestation statement is not matched with its format: %v", attObj.Fmt)
+		return errors.New(fmt.Sprintf("invalidRegistrationRequest: %v", errMsg))
+	}
+
 	return nil
 }

@@ -61,7 +61,7 @@ func (h *todoHandler) TodoShow(w http.ResponseWriter, r *http.Request) {
 
 func (h *todoHandler) TodoCreate(w http.ResponseWriter, r *http.Request) {
 	var todo model.Todo
-	body, err := ioutil.ReadAll(io.LimitReader(r.Body, 1024*KB)) // 1MB
+	body, err := ioutil.ReadAll(io.LimitReader(r.Body, 1024))
 	if err != nil {
 		httputil.Error(w, http.StatusInternalServerError, "request body is too large", err)
 	}

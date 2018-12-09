@@ -1,5 +1,7 @@
 package input
 
+import "github.com/miliya612/webauthn-demo/webauthnif"
+
 type RegistrationInit struct {
 	// ID is a identifier
 	ID string `json:"id"`
@@ -8,5 +10,6 @@ type RegistrationInit struct {
 }
 
 type Registration struct {
-
+	Body webauthnif.PublicKeyCredential
+	Challenge []byte
 }

@@ -1,5 +1,38 @@
 package webauthnif
 
+// 2.2
+// Credential represents an interface of credentials which are returned in the API `navigator.credentials.* `
+// See https://w3c.github.io/webappsec-credential-management/#credential
+type Credential struct {
+	ID string `json:"id"`
+	Type string `json:"type"`
+}
+
+// 5.1
+// PublicKeyCredential interface inherits from Credential [CREDENTIAL-MANAGEMENT-1], and contains the attributes that
+// are returned to the caller when a new credential is created, or a new assertion is requested.
+type PublicKeyCredential struct {
+	Credential
+	// RawID returns the ArrayBuffer contained in the [[identifier]] internal slot.
+	RawID []byte `json:"rawId"`
+	// Response (AuthenticatorAttestationResponse) contains the authenticator's response to the client’s request to
+	// either create a public key credential, or generate an authentication assertion. If the PublicKeyCredential is
+	// created in response to create(), this attribute’s value will be an AuthenticatorAttestationResponse, otherwise,
+	// the PublicKeyCredential was created in response to get(), and this attribute’s value will be an
+	// AuthenticatorAssertionResponse.
+	Response AuthenticatorAttestationResponse `json:"response"`
+	// AuthenticationExtensionsClientOutputs returns the value of [[clientExtensionsResults]], which is a map containing
+	// extension identifier → client extension output entries produced by the extension’s client extension processing.
+	AuthenticationExtensionsClientOutputs AuthenticationExtensionsClientOutputs `json:"authenticationExtensionsClientOutputs"`
+}
+
+// 5.9
+// AuthenticationExtensionsClientOutputs dictionary containing the authenticator extension input values for zero or more
+// WebAuthn extensions, as defined in §9 WebAuthn Extensions.
+type AuthenticationExtensionsClientOutputs struct {
+
+}
+
 // 5.1.1
 // CredentialCreationOptions is an extension of the CredentialCreationOptions dictionary in order to support
 // registration via navigator.credentials.create()

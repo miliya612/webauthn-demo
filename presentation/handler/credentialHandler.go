@@ -8,6 +8,7 @@ import (
 	"github.com/miliya612/webauthn-demo/presentation/usecase"
 	"github.com/miliya612/webauthn-demo/presentation/usecase/input"
 	"net/http"
+	"unsafe"
 )
 
 
@@ -51,7 +52,10 @@ func (h *credentialHandler) RegistrationInit(w http.ResponseWriter, r *http.Requ
 		httputil.Error(w, http.StatusInternalServerError, "something went wrong", err)
 		return
 	}
-	httputil.Accepted(w, resp)
+
+	http.SetCookie(w, &http.Cookie{Name: "Challenge", Value: fmt.Sprint(resp.PublicKey.Challenge)})
+
+	httputil.Created(w, resp)
 }
 
 
@@ -111,9 +115,15 @@ func parseRegistrationRequest(r *http.Request) (*input.Registration, error) {
 		return nil, err
 	}
 
-	if err = json.Unmarshal(body, &in); err != nil {
+	if err = json.Unmarshal(body, &in.Body); err != nil {
 		return nil, errors.New(fmt.Sprint("failed marshalling json", err))
 	}
+
+	c, err := r.Cookie("Challenge")
+	if err != nil {
+		return nil, errors.New(fmt.Sprint("failed parsing cookie", err))
+	}
+	in.Challenge = *(*[]byte)(unsafe.Pointer(&c))
 
 	return &in, nil
 }

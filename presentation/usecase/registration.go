@@ -1,6 +1,7 @@
 package usecase
 
 import (
+	"crypto/sha256"
 	"github.com/miliya612/webauthn-demo/domain/service"
 	"github.com/miliya612/webauthn-demo/presentation/usecase/input"
 	"github.com/miliya612/webauthn-demo/presentation/usecase/output"
@@ -18,12 +19,45 @@ func NewRegistrationUseCase(service service.RegistrationService) (RegistrationUs
 	return &registrationUseCase{service: service}
 }
 
-func (uc registrationUseCase)Registration(input input.Registration) (*output.Registration, error){
-	//options, err := uc.service.Register()
-	//if err != nil {
-	//	return nil, err
-	//}
-	return &output.Registration{
-		//Options: *options,
-	}, nil
+func (uc registrationUseCase)Registration(input input.Registration) (*output.Registration, error) {
+	d, err := uc.service.ParseClientData(input.Body.Response)
+	if err != nil {
+		return nil, err
+	}
+
+	c := d.ClientData
+	err = uc.service.ValidateClientData(c)
+	if err != nil {
+		return nil, err
+	}
+
+	// 7. Compute the hash of response.clientDataJSON using SHA-256.
+	hashedClientDataJSON := sha256.Sum256(input.Body.Response.ClientDataJSON)
+
+	d, err = uc.service.ParseAttestationObj(input.Body.Response.AttestationObject, d)
+	if err != nil {
+		return nil, err
+	}
+
+	err = uc.service.ValidateAuthenticatorData(d.DecodedAttestationObject.AuthData)
+	if err != nil {
+		return nil, err
+	}
+
+	err = uc.service.ValidateClientExtensionOutputs(input.Body.AuthenticationExtensionsClientOutputs)
+	if err != nil {
+		return nil, err
+	}
+
+	err = uc.service.ValidateAttestationResponse(d.DecodedAttestationObject, hashedClientDataJSON)
+	if err != nil {
+		return nil, err
+	}
+
+	err = uc.service.Register([]byte{}, d.DecodedAttestationObject.AuthData.AttestedCredentialData)
+	if err != nil {
+		return nil, err
+	}
+
+	return nil, nil
 }
