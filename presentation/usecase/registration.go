@@ -5,6 +5,7 @@ import (
 	"github.com/miliya612/webauthn-demo/domain/service"
 	"github.com/miliya612/webauthn-demo/presentation/usecase/input"
 	"github.com/miliya612/webauthn-demo/presentation/usecase/output"
+	"github.com/miliya612/webauthn-demo/webauthnif"
 )
 
 type RegistrationUseCase interface {
@@ -15,7 +16,7 @@ type registrationUseCase struct {
 	service service.RegistrationService
 }
 
-func NewRegistrationUseCase(service service.RegistrationService) (RegistrationUseCase)  {
+func NewRegistrationUseCase(service service.RegistrationService) (RegistrationUseCase) {
 	return &registrationUseCase{service: service}
 }
 
@@ -24,14 +25,17 @@ func NewRegistrationUseCase(service service.RegistrationService) (RegistrationUs
 // When registering a new credential, represented by an AuthenticatorAttestationResponse structure response and an
 // AuthenticationExtensionsClientOutputs structure clientExtensionResults, as part of a registration ceremony, a Relying
 // Party MUST proceed as follows:
-func (uc registrationUseCase)Registration(input input.Registration) (*output.Registration, error) {
-	d, err := uc.service.ParseClientData(input.Body.Response)
+func (uc registrationUseCase) Registration(input input.Registration) (*output.Registration, error) {
+	d := &webauthnif.DecodedAuthenticatorAttestationResponse{}
+
+	c, err := uc.service.ParseClientData(input.Body.Response)
 	if err != nil {
 		return nil, err
 	}
 
-	c := d.ClientData
-	err = uc.service.ValidateClientData(c)
+	d.ClientData = *c
+
+	err = uc.service.ValidateClientData(input.Challenge, d.ClientData)
 	if err != nil {
 		return nil, err
 	}
@@ -59,7 +63,7 @@ func (uc registrationUseCase)Registration(input input.Registration) (*output.Reg
 		return nil, err
 	}
 
-	err = uc.service.Register([]byte{}, d.DecodedAttestationObject.AuthData.AttestedCredentialData)
+	err = uc.service.Register(input.Challenge, d.DecodedAttestationObject.AuthData.AttestedCredentialData)
 	if err != nil {
 		return nil, err
 	}

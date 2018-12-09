@@ -46,17 +46,16 @@ type DecodedAuthenticatorResponse struct {
 
 // CollectedClientData represents
 type CollectedClientData struct {
-	Type string `json:"type"`
-	Challenge BufferSource `json:"challenge"`
-	Origin string `json:"origin"`
+	Type      string `json:"type"`
+	Challenge string `json:"challenge"`
+	Origin    string `json:"origin"`
 }
-
 
 // DecodedAttestationObject
 type DecodedAttestationObject struct {
-	Fmt AttestationStatementFormatIdentifier `json:"fmt"`
-	AuthData AuthenticatorData `json:"authenticatorData"`
-	AttStmt interface{} `json:"attStmt"`
+	Fmt      AttestationStatementFormatIdentifier `json:"fmt"`
+	AuthData AuthenticatorData                    `json:"authenticatorData"`
+	AttStmt  interface{}                          `json:"attStmt"`
 }
 
 // 8.1
@@ -164,5 +163,4 @@ type AttestedCredentialData struct {
 }
 
 type AttestationStatement struct {
-
 }

@@ -21,11 +21,11 @@ func NewTodoService(repository repo.TodoRepo) TodoService {
 	return &todoService{repo: repository}
 }
 
-func (s todoService) All() (model.Todos, error){
+func (s todoService) All() (model.Todos, error) {
 	return s.repo.GetAll()
 }
 
-func (s todoService) Find(id int) (t model.Todo, err error){
+func (s todoService) Find(id int) (t model.Todo, err error) {
 	t, err = s.repo.GetByID(id)
 	if err != nil {
 		err = errUtil.ErrTodoNotFound{}
@@ -34,12 +34,12 @@ func (s todoService) Find(id int) (t model.Todo, err error){
 	return
 }
 
-func (s todoService) Create(todo model.Todo) (id int, err error){
+func (s todoService) Create(todo model.Todo) (id int, err error) {
 	id, err = s.repo.Create(todo)
 	return
 }
 
-func (s todoService) Remove(id int) (err error){
+func (s todoService) Remove(id int) (err error) {
 	count, err := s.repo.Remove(id)
 	if err != nil {
 		return

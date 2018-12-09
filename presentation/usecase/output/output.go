@@ -7,5 +7,4 @@ type RegistrationInit struct {
 }
 
 type Registration struct {
-
 }

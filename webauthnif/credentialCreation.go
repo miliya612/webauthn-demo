@@ -4,7 +4,7 @@ package webauthnif
 // Credential represents an interface of credentials which are returned in the API `navigator.credentials.* `
 // See https://w3c.github.io/webappsec-credential-management/#credential
 type Credential struct {
-	ID string `json:"id"`
+	ID   string `json:"id"`
 	Type string `json:"type"`
 }
 
@@ -30,7 +30,6 @@ type PublicKeyCredential struct {
 // AuthenticationExtensionsClientOutputs dictionary containing the authenticator extension input values for zero or more
 // WebAuthn extensions, as defined in §9 WebAuthn Extensions.
 type AuthenticationExtensionsClientOutputs struct {
-
 }
 
 // 5.1.1
@@ -162,7 +161,7 @@ type AuthenticatorSelectionCriteria struct {
 	RequireResidentKey bool `json:"requireResidentKey,omitempty"`
 	// UserVerification describes the Relying Party's requirements regarding user verification for the create()
 	// operation. Eligible authenticators are filtered to only those capable of satisfying this requirement.
-	UserVerification  UserVerificationRequirement `json:"userVerification,omitempty"`
+	UserVerification UserVerificationRequirement `json:"userVerification,omitempty"`
 }
 
 // 5.4.6
@@ -192,8 +191,7 @@ const (
 // AuthenticationExtensionsClientInputs is a dictionary containing the client extension output values for zero or more
 // WebAuthn extensions, as defined in §9 WebAuthn Extensions.
 // See https://www.w3.org/TR/webauthn/#dictdef-authenticationextensionsclientinputs
-type AuthenticationExtensionsClientInputs struct {}
-
+type AuthenticationExtensionsClientInputs struct{}
 
 // PublicKeyCredentialType defines the valid credential types. It is an extension point; values can be added to it in
 // the future, as more credential types are defined. The values of this enumeration are used for versioning the

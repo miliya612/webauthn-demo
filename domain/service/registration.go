@@ -4,6 +4,7 @@ import "C"
 import (
 	"bytes"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"github.com/miliya612/webauthn-demo/domain/model"
@@ -16,11 +17,11 @@ import (
 
 type RegistrationService interface {
 	GetOptions(id, displayName string) (*webauthnif.CredentialCreationOptions, error)
-	ReserveClientInfo(userId, chal []byte, name, displayName, icon string) error
+	ReserveClientInfo(userId []byte, name, displayName, icon string) error
 	Register(userId []byte, data webauthnif.AttestedCredentialData) error
 	ParseClientData(req webauthnif.AuthenticatorAttestationResponse) (
-	*webauthnif.DecodedAuthenticatorAttestationResponse, error)
-	ValidateClientData(c webauthnif.CollectedClientData) error
+		*webauthnif.CollectedClientData, error)
+	ValidateClientData(rawChal []byte, c webauthnif.CollectedClientData) error
 	ParseAttestationObj(
 		req []byte,
 		d *webauthnif.DecodedAuthenticatorAttestationResponse,
@@ -33,11 +34,15 @@ type RegistrationService interface {
 type registrationService struct {
 	credentialRepo repo.CredentialRepo
 	userRepo       repo.UserRepo
+	sessionRepo    repo.SessionRepo
 }
 
-func NewRegistrationService(credential repo.CredentialRepo) RegistrationService {
+func NewRegistrationService(
+	credential repo.CredentialRepo, user repo.UserRepo, session repo.SessionRepo) RegistrationService {
 	return &registrationService{
 		credentialRepo: credential,
+		userRepo:       user,
+		sessionRepo:    session,
 	}
 }
 
@@ -129,36 +134,40 @@ func (s registrationService) GetOptions(id, displayName string) (*webauthnif.Cre
 	options := &webauthnif.CredentialCreationOptions{
 		PublicKey: *pkoptions,
 	}
+
 	return options, nil
 }
 
-func (s registrationService) ReserveClientInfo(userId, chal []byte, name, displayName, icon string) error {
+func (s registrationService) ReserveClientInfo(userId []byte, name, displayName, icon string) error {
 	u := &model.User{
 		ID:          userId,
 		Name:        name,
 		DisplayName: displayName,
 		Icon:        icon,
 	}
-	_, err := s.userRepo.Create(*u, chal)
-	return err
+	_, err := s.userRepo.Create(*u)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (s registrationService) ParseClientData(req webauthnif.AuthenticatorAttestationResponse) (
-	*webauthnif.DecodedAuthenticatorAttestationResponse, error) {
+	*webauthnif.CollectedClientData, error) {
 
 	// 1. Let JSONtext be the result of running UTF-8 decode on the value of response.clientDataJSON.
 	// 2. Let C, the client data claimed as collected during the credential creation, be the result of running an
 	// implementation-specific JSON parser on JSONtext.
-	d := webauthnif.DecodedAuthenticatorAttestationResponse{}
-	c := d.ClientData
+	c := webauthnif.CollectedClientData{}
 	if err := json.Unmarshal(req.ClientDataJSON, &c); err != nil {
-		return nil, errors.New(fmt.Sprintf("invalidRegistrationRequest: %v", err))
+		return nil, errors.New(fmt.Sprintf("invalidRegistrationRequest: parsingClientData: %v", err))
 	}
 
-	return &d, nil
+	return &c, nil
 }
 
-func (s registrationService) ValidateClientData(c webauthnif.CollectedClientData) error {
+func (s registrationService) ValidateClientData(rawChal []byte, c webauthnif.CollectedClientData) error {
 	// 3. Verify that the value of C.type is webauthn.create.
 	if c.Type != CLIENTDATATYPE {
 		errMsg := fmt.Sprintf("got %q, but %q is required", c.Type, CLIENTDATATYPE)
@@ -167,15 +176,17 @@ func (s registrationService) ValidateClientData(c webauthnif.CollectedClientData
 
 	// 4. Verify that the value of C.challenge matches the challenge that was sent to the authenticator in the create()
 	// call.
-	var rawChallenge interface{} = "TODO: GET FROM USERS SESSION"
-	bytesArrayChallenge, ok := rawChallenge.([]byte)
-	if !ok {
-		errMsg := "invalid challenge"
-		return errors.New(fmt.Sprintf("invalidRegistrationRequest: %v", errMsg))
-	}
-	orgnChallenge := (webauthnif.BufferSource)(bytesArrayChallenge)
+	orgnChallenge := (webauthnif.BufferSource)(rawChal)
 
-	if !c.Challenge.Equals(orgnChallenge) {
+	byteChal, err := base64.RawURLEncoding.DecodeString(c.Challenge) // This is raw URL encoding, so the JSON parser does not handle it
+	if err != nil {
+		return err
+	}
+	challenge := (webauthnif.BufferSource)(byteChal)
+
+	if !challenge.Equals(orgnChallenge) {
+		fmt.Println("want: ", orgnChallenge)
+		fmt.Println("got: ", challenge)
 		errMsg := "invalid challenge"
 		return errors.New(fmt.Sprintf("invalidRegistrationRequest: %v", errMsg))
 	}

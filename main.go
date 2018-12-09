@@ -1,14 +1,13 @@
 package main
 
 import (
-	"github.com/miliya612/webauthn-demo/registry"
 	"github.com/miliya612/webauthn-demo/presentation/routes"
+	"github.com/miliya612/webauthn-demo/registry"
 	"log"
 	"net/http"
 	"os"
 	"time"
 )
-
 
 func init() {
 	f, err := os.OpenFile("tmp/application.log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)

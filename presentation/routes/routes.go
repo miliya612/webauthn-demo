@@ -26,7 +26,7 @@ func getRoutes(app handler.AppHandler) []Route {
 }
 
 func index(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprint(w, `<html>
+	fmt.Fprint(w, `<html>
 <head>
 	<title>WebAuthn demo</title>
 	<style>
@@ -123,12 +123,12 @@ class WebAuthn {
 					},
 					body: JSON.stringify({
 						id: credential.id,
+						type: credential.type,
 						rawId: WebAuthn._encodeBuffer(credential.rawId),
 						response: {
-							attestationObject: WebAuthn._encodeBuffer(credential.response.attestationObject),
-							clientDataJSON: WebAuthn._encodeBuffer(credential.response.clientDataJSON)
+							clientDataJSON: WebAuthn._encodeBuffer(credential.response.clientDataJSON),
+							attestationObject: WebAuthn._encodeBuffer(credential.response.attestationObject)
 						},
-						type: credential.type
 					}),
 				})
 			})

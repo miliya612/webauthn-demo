@@ -8,10 +8,7 @@ import (
 	"github.com/miliya612/webauthn-demo/presentation/usecase"
 	"github.com/miliya612/webauthn-demo/presentation/usecase/input"
 	"net/http"
-	"unsafe"
 )
-
-
 
 type CredentialHandler interface {
 	RegistrationInit(w http.ResponseWriter, r *http.Request)
@@ -22,16 +19,16 @@ type CredentialHandler interface {
 
 type credentialHandler struct {
 	registrationInit usecase.RegistrationInitUseCase
-	registration usecase.RegistrationUseCase
+	registration     usecase.RegistrationUseCase
 }
 
 func NewCredentialHandler(
-		registrationInit usecase.RegistrationInitUseCase,
-		registration usecase.RegistrationUseCase,
-	) CredentialHandler {
+	registrationInit usecase.RegistrationInitUseCase,
+	registration usecase.RegistrationUseCase,
+) CredentialHandler {
 	return &credentialHandler{
 		registrationInit: registrationInit,
-		registration: registration,
+		registration:     registration,
 	}
 }
 
@@ -53,11 +50,12 @@ func (h *credentialHandler) RegistrationInit(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	http.SetCookie(w, &http.Cookie{Name: "Challenge", Value: fmt.Sprint(resp.PublicKey.Challenge)})
+	fmt.Println("chal: ", string(resp.PublicKey.Challenge))
+
+	http.SetCookie(w, &http.Cookie{Name: "Challenge", Value: string(resp.PublicKey.Challenge)})
 
 	httputil.Created(w, resp)
 }
-
 
 func (h *credentialHandler) Registration(w http.ResponseWriter, r *http.Request) {
 	in, err := parseRegistrationRequest(r)
@@ -119,11 +117,14 @@ func parseRegistrationRequest(r *http.Request) (*input.Registration, error) {
 		return nil, errors.New(fmt.Sprint("failed marshalling json", err))
 	}
 
+	fmt.Println(in.Body)
+
 	c, err := r.Cookie("Challenge")
 	if err != nil {
 		return nil, errors.New(fmt.Sprint("failed parsing cookie", err))
 	}
-	in.Challenge = *(*[]byte)(unsafe.Pointer(&c))
+	fmt.Println("chalCookie: ", c.Value)
+	in.Challenge = []byte(c.Value)
 
 	return &in, nil
 }

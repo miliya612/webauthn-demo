@@ -113,17 +113,17 @@ func (r *response) respond(w http.ResponseWriter, body interface{}) {
 }
 
 type errResp struct {
-	Error string `json:"error"`
+	Error   string `json:"error"`
 	Message string `json:"message"`
 }
 
- func createErrMsg(code int, msg string) errResp {
- 	return errResp{
- 		Error: http.StatusText(code),
- 		Message: msg,
+func createErrMsg(code int, msg string) errResp {
+	return errResp{
+		Error:   http.StatusText(code),
+		Message: msg,
 	}
- }
+}
 
- func isStatusCodeErrors(code int) bool {
- 	return code / 100 == 4 || code / 100 == 5
- }
+func isStatusCodeErrors(code int) bool {
+	return code/100 == 4 || code/100 == 5
+}

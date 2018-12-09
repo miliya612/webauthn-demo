@@ -80,7 +80,7 @@ func (h *todoHandler) TodoCreate(w http.ResponseWriter, r *http.Request) {
 	httputil.Created(w, todo)
 }
 
-func (h *todoHandler) TodoDelete(w http.ResponseWriter, r *http.Request){
+func (h *todoHandler) TodoDelete(w http.ResponseWriter, r *http.Request) {
 	id, err := parseTodoId(r)
 	if err != nil {
 		httputil.Error(w, http.StatusUnprocessableEntity, "invalid parameter", err)
