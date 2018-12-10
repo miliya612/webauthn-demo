@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"github.com/miliya612/webauthn-demo/domain/service"
+	"github.com/miliya612/webauthn-demo/presentation/httputil"
 	"github.com/miliya612/webauthn-demo/presentation/usecase/input"
 	"github.com/miliya612/webauthn-demo/presentation/usecase/output"
 	"github.com/miliya612/webauthn-demo/webauthnif"
@@ -34,8 +35,9 @@ func NewRegistrationUseCase(registration service.RegistrationService, session se
 // Party MUST proceed as follows:
 func (uc registrationUseCase) Registration(ctx context.Context, input input.Registration) (*output.Registration, error) {
 
-	sid := ctx.Value("sessionID")
-	session, ok := uc.session.Get(sid.(string))
+	rawSid := ctx.Value(httputil.KeySessionID)
+	sid := rawSid.(string)
+	session, ok := uc.session.Get(sid)
 	if !ok {
 		return nil, errors.New("session is not set")
 	}

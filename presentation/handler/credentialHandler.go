@@ -52,7 +52,7 @@ func (h *credentialHandler) RegistrationInit(w http.ResponseWriter, r *http.Requ
 		httputil.Error(w, http.StatusInternalServerError, "something went wrong", err)
 		return
 	}
-	ctx = context.WithValue(ctx, "sid", uuid)
+	ctx = context.WithValue(ctx, httputil.KeySessionID, uuid)
 
 	resp, err := h.registrationInit.RegistrationInit(ctx, *in)
 	if err != nil {
@@ -62,7 +62,7 @@ func (h *credentialHandler) RegistrationInit(w http.ResponseWriter, r *http.Requ
 
 	fmt.Println("chal: ", string(resp.PublicKey.Challenge))
 
-	http.SetCookie(w, &http.Cookie{Name: "sid", Value: uuid})
+	http.SetCookie(w, &http.Cookie{Name: httputil.KeySessionID, Value: uuid})
 
 	httputil.Created(w, resp)
 }
@@ -79,7 +79,13 @@ func (h *credentialHandler) Registration(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	resp, err := h.registration.Registration(r.Context(), *in)
+	ctx, err := getCtxFromSession(r)
+	if err = validateRegistrationRequest(in); err != nil {
+		httputil.Error(w, http.StatusBadRequest, "invalid cookie", err)
+		return
+	}
+
+	resp, err := h.registration.Registration(ctx, *in)
 	if err != nil {
 		httputil.Error(w, http.StatusInternalServerError, "something went wrong", err)
 		return
@@ -127,16 +133,27 @@ func parseRegistrationRequest(r *http.Request) (*input.Registration, error) {
 		return nil, errors.New(fmt.Sprint("failed marshalling json", err))
 	}
 
-	c, err := r.Cookie("sid")
+	c, err := r.Cookie(httputil.KeySessionID)
 	if err != nil {
 		return nil, errors.New(fmt.Sprint("failed parsing cookie", err))
 	}
 
 	fmt.Println("sessionID: ", c.Value)
-	ctx := context.WithValue(r.Context(), "sid", c.Value)
+	ctx := context.WithValue(r.Context(), httputil.KeySessionID, c.Value)
 	r = r.WithContext(ctx)
 
 	return &in, nil
+}
+
+func getCtxFromSession(r *http.Request) (context.Context, error) {
+	c, err := r.Cookie(httputil.KeySessionID)
+	if err != nil {
+		return nil, errors.New(fmt.Sprint("failed parsing cookie", err))
+	}
+
+	fmt.Println("sessionID: ", c.Value)
+	ctx := context.WithValue(r.Context(), httputil.KeySessionID, c.Value)
+	return ctx, nil
 }
 
 func validateRegistrationRequest(in *input.Registration) error {

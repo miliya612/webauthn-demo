@@ -6,6 +6,8 @@ import (
 	"time"
 )
 
+const KeySessionID = "sid"
+
 type Manager struct {
 	cookieName  string     //private cookiename
 	lock        sync.Mutex // protects session

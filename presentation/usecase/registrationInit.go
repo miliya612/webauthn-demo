@@ -3,6 +3,7 @@ package usecase
 import (
 	"context"
 	"github.com/miliya612/webauthn-demo/domain/service"
+	"github.com/miliya612/webauthn-demo/presentation/httputil"
 	"github.com/miliya612/webauthn-demo/presentation/usecase/input"
 	"github.com/miliya612/webauthn-demo/presentation/usecase/output"
 	"github.com/miliya612/webauthn-demo/webauthnif"
@@ -37,7 +38,7 @@ func (uc registrationInitUseCase) RegistrationInit(ctx context.Context, input in
 		return nil, err
 	}
 
-	rawSid := ctx.Value("sid")
+	rawSid := ctx.Value(httputil.KeySessionID)
 	sid := rawSid.(string)
 	err = uc.session.Store(sid, u.ID, options.PublicKey.Challenge)
 	if err != nil {

@@ -191,7 +191,7 @@ func (s registrationService) ValidateClientData(rawChal []byte, c webauthnif.Col
 
 	// 5. Verify that the value of C.origin matches the Relying Party's origin.
 	// TODO: RPID, subdomainマッチのロジック必要そう。subDomainとrootDomainの判定処理も書く
-	if c.Origin != RPID {
+	if c.Origin != "http://" + RPID + ":8080" {
 		errMsg := "invalid origin"
 		return errors.New(fmt.Sprintf("invalidRegistrationRequest: %v", errMsg))
 	}
@@ -221,7 +221,7 @@ func (s registrationService) ParseAttestationObj(
 
 func (s registrationService) ValidateAuthenticatorData(data webauthnif.AuthenticatorData) error {
 	// 9. Verify that the RP ID hash in authData is indeed the SHA-256 hash of the RP ID expected by the RP.
-	wantRpIdHash := sha256.Sum256([]byte(RPID))
+	wantRpIdHash := sha256.Sum256([]byte("http://"+RPID+":8080"))
 	gotRpIdHash := data.RpIdHash
 	if !bytes.Equal(wantRpIdHash[:], gotRpIdHash) {
 		errMsg := "invalid origin"
