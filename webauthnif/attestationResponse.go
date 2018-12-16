@@ -87,8 +87,8 @@ const (
 // with limited capabilities and low power requirements, with much simpler software stacks than the client platform.
 // See https://www.w3.org/TR/webauthn/#authenticator-data
 type AuthenticatorData struct {
-	// RpIdHash is SHA-256 hash of the RP ID associated with the credential
-	RpIdHash []byte
+	// RPIDHash is SHA-256 hash of the RP ID associated with the credential
+	RPIDHash []byte
 	// Flags
 	Flags AuthenticatorDataFlags
 	// SignCount is Signature counter, 32-bit unsigned big-endian integer

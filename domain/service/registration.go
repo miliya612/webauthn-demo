@@ -222,7 +222,7 @@ func (s registrationService) ParseAttestationObj(
 func (s registrationService) ValidateAuthenticatorData(data webauthnif.AuthenticatorData) error {
 	// 9. Verify that the RP ID hash in authData is indeed the SHA-256 hash of the RP ID expected by the RP.
 	wantRpIdHash := sha256.Sum256([]byte("http://"+RPID+":8080"))
-	gotRpIdHash := data.RpIdHash
+	gotRpIdHash := data.RPIDHash
 	if !bytes.Equal(wantRpIdHash[:], gotRpIdHash) {
 		errMsg := "invalid origin"
 		return errors.New(fmt.Sprintf("invalidRegistrationRequest: %v", errMsg))
