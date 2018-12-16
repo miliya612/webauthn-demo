@@ -18,7 +18,7 @@ import (
 type RegistrationService interface {
 	GetOptions(id, displayName string) (*webauthnif.CredentialCreationOptions, error)
 	ReserveClientInfo(userId []byte, name, displayName, icon string) error
-	Register(userId []byte, data webauthnif.AttestedCredentialData) error
+	Register(userId []byte, data webauthnif.AuthenticatorData) error
 	ParseClientData(req webauthnif.AuthenticatorAttestationResponse) (
 		*webauthnif.CollectedClientData, error)
 	ValidateClientData(rawChal []byte, c webauthnif.CollectedClientData) error
@@ -216,12 +216,20 @@ func (s registrationService) ParseAttestationObj(
 	if err != nil {
 		return nil, err
 	}
+	fmt.Println("-----")
+	fmt.Println(d.DecodedAttestationObject.RawAuthData)
+
+	err = d.DecodedAttestationObject.UnmarshalBinary()
+	if err != nil {
+		return nil, err
+	}
+
 	return d, nil
 }
 
 func (s registrationService) ValidateAuthenticatorData(data webauthnif.AuthenticatorData) error {
 	// 9. Verify that the RP ID hash in authData is indeed the SHA-256 hash of the RP ID expected by the RP.
-	wantRpIdHash := sha256.Sum256([]byte("http://"+RPID+":8080"))
+	wantRpIdHash := sha256.Sum256([]byte(RPID))
 	gotRpIdHash := data.RPIDHash
 	if !bytes.Equal(wantRpIdHash[:], gotRpIdHash) {
 		errMsg := "invalid origin"
@@ -293,11 +301,11 @@ func (s registrationService) ValidateAttestationResponse(
 	return nil
 }
 
-func (s registrationService) Register(userId []byte, data webauthnif.AttestedCredentialData) error {
+func (s registrationService) Register(userId []byte, data webauthnif.AuthenticatorData) error {
 	// 17. Check that the credentialId is not yet registered to any other user. If registration is requested for a
 	// credential that is already registered to a different user, the Relying Party SHOULD fail this registration
 	// ceremony, or it MAY decide to accept the registration, e.g. while deleting the older registration.
-	cred, err := s.credentialRepo.GetByCredentialID(data.CredentialID)
+	cred, err := s.credentialRepo.GetByCredentialID(data.AttestedCredentialData.CredentialID)
 	if err != nil {
 		return errors.New(fmt.Sprintf("invalidRegistrationRequest: %v", err))
 	}
@@ -311,10 +319,10 @@ func (s registrationService) Register(userId []byte, data webauthnif.AttestedCre
 	// the credentialId and credentialPublicKey in the attestedCredentialData in authData, as appropriate for the
 	// Relying Party's system.
 	newCred := model.Credential{
-		CredentialID: data.CredentialID,
+		CredentialID: data.AttestedCredentialData.CredentialID,
 		UserID:       userId,
-		PublicKey:    data.CredentialPublicKey,
-		SignCount:    0,
+		PublicKey:    data.AttestedCredentialData.CredentialPublicKey,
+		SignCount:    data.SignCount,
 	}
 	_, err = s.credentialRepo.Create(newCred)
 	if err != nil {

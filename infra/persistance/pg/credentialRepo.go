@@ -6,7 +6,6 @@ import (
 	_ "github.com/lib/pq"
 	"github.com/miliya612/webauthn-demo/domain/model"
 	"github.com/miliya612/webauthn-demo/domain/repo"
-	"github.com/pkg/errors"
 )
 
 type credentialRepo struct {
@@ -26,7 +25,8 @@ func (repo credentialRepo) GetByCredentialID(id []byte) (*model.Credential, erro
 			return c, nil
 		}
 	}
-	return nil, errors.New("credential not found")
+	//return nil, errors.New("credential not found")
+	return nil, nil
 }
 func (repo credentialRepo) Create(credential model.Credential) (*model.Credential, error) {
 	credentials = append(credentials, &credential)

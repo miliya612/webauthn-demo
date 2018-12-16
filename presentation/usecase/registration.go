@@ -79,7 +79,7 @@ func (uc registrationUseCase) Registration(ctx context.Context, input input.Regi
 		return nil, err
 	}
 
-	err = uc.registration.Register(session.UserID, d.DecodedAttestationObject.AuthData.AttestedCredentialData)
+	err = uc.registration.Register(session.UserID, d.DecodedAttestationObject.AuthData)
 	if err != nil {
 		return nil, err
 	}
