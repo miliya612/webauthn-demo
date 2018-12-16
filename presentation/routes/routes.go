@@ -17,8 +17,8 @@ type Routes []Route
 
 func getRoutes(app handler.AppHandler) []Route {
 	return Routes{
-		Route{"RegistrationInit", "POST", "/credential/register/init", app.RegistrationInit},
-		Route{"Registration", "POST", "/credential/register", app.Registration},
+		Route{"RegistrationInit", "POST", "/attestation/request", app.RegistrationInit},
+		Route{"Registration", "POST", "/attestation/verify", app.Registration},
 		//Route{"AuthenticationInit", "POST", "/credential/authenticate/init", app.TodoCreate},
 		//Route{"Authentication", "POST", "/credential/authenticate", app.TodoDelete},
 		Route{"Index", "GET", "/", index},
@@ -97,7 +97,7 @@ class WebAuthn {
 		  'Accept': 'application/json',
 		  'Content-Type': 'application/json'
 		};
-		return fetch('/credential/register/init', {
+		return fetch('/attestation/request', {
 				method: 'POST',
 				headers,
 				body})
@@ -115,7 +115,7 @@ class WebAuthn {
 			})
 			.then(res => navigator.credentials.create(res))
 			.then(credential => {
-				return fetch('/credential/register', {
+				return fetch('/attestation/verify', {
 					method: 'POST',
 					headers: {
 						'Accept': 'application/json',
