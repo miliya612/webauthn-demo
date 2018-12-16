@@ -113,7 +113,7 @@ func (s registrationService) GetOptions(id, displayName string) (*webauthnif.Cre
 		UserVerification:        webauthnif.UserVerificationRequirementEmpty,
 	}
 
-	acp := webauthnif.AttestationConveyancePreferenceEmpty
+	acp := webauthnif.AttestationConveyancePreferenceDirect
 
 	extensions := webauthnif.AuthenticationExtensionsClientInputs{}
 
